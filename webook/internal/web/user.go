@@ -1,9 +1,12 @@
 package web
 
 import (
-	"fmt"
+	"errors"
 	regexp "github.com/dlclark/regexp2"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/ischeng28/basic-go/webook/internal/domain"
+	"github.com/ischeng28/basic-go/webook/internal/service"
 	"net/http"
 )
 
@@ -11,9 +14,10 @@ import (
 type UserHandler struct {
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
+	svc         *service.UserService
 }
 
-func NewUserHandler() *UserHandler {
+func NewUserHandler(svc *service.UserService) *UserHandler {
 	const (
 		emailRegexPattern = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
 		// 和上面比起来，用 ` 看起来就比较清爽
@@ -24,6 +28,7 @@ func NewUserHandler() *UserHandler {
 	return &UserHandler{
 		emailExp:    emailExp,
 		passwordExp: passwordExp,
+		svc:         svc,
 	}
 }
 
@@ -81,12 +86,54 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 		return
 	}
 
-	ctx.String(http.StatusOK, "注册成功")
-	fmt.Println(req)
+	err = u.svc.SingUp(ctx, domain.User{
+		Email:    req.Email,
+		Password: req.Password,
+	})
+
+	switch {
+	case err == nil:
+		ctx.String(http.StatusOK, "注册成功")
+	case errors.Is(err, service.ErrDuplicateEmail):
+		ctx.String(http.StatusOK, "邮箱冲突，请换一个")
+	default:
+		ctx.String(http.StatusOK, "系统错误")
+	}
+
 }
 
-func (u *UserHandler) Login(ctx *gin.Context) {
+func (h *UserHandler) Login(ctx *gin.Context) {
+	type LoginReq struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req LoginReq
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
 
+	u, err := h.svc.Login(ctx, domain.User{
+		Email:    req.Email,
+		Password: req.Password,
+	})
+	switch {
+	case err == nil:
+		//设置session
+		sess := sessions.Default(ctx)
+		//要放到session中的值
+		sess.Set("userId", u.Id)
+		sess.Options(sessions.Options{
+			Secure:   true,
+			HttpOnly: true,
+			MaxAge:   60 * 30,
+		})
+		sess.Save()
+		ctx.String(http.StatusOK, "登录成功")
+	case errors.Is(err, service.ErrInvalidUserOrPassword):
+		ctx.String(http.StatusOK, "用户名或者密码不正确")
+	default:
+		ctx.String(http.StatusOK, "系统错误")
+	}
 }
 
 func (u *UserHandler) Edit(ctx *gin.Context) {
