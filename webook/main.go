@@ -8,6 +8,8 @@ import (
 	"github.com/ischeng28/basic-go/webook/internal/service"
 	"github.com/ischeng28/basic-go/webook/internal/web"
 	"github.com/ischeng28/basic-go/webook/internal/web/middleware"
+	"github.com/ischeng28/basic-go/webook/pkg/ginx/middleware/ratelimit"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strings"
@@ -50,6 +52,12 @@ func initWebServer() *gin.Engine {
 		},
 		MaxAge: 12 * time.Hour,
 	}))
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
+
+	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
 
 	useJWT(server)
 	//store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
