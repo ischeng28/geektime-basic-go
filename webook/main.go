@@ -2,8 +2,6 @@ package main
 
 import (
 	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/ischeng28/basic-go/webook/internal/repository"
 	"github.com/ischeng28/basic-go/webook/internal/repository/dao"
@@ -48,22 +46,28 @@ func initWebServer() *gin.Engine {
 				//开发环境
 				return true
 			}
-			return strings.Contains(origin, "yourcompany.com")
+			return strings.Contains(origin, "cheng.com")
 		},
 		MaxAge: 12 * time.Hour,
 	}))
 
-	store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
-		[]byte("secret"), []byte("secret"))
-	if err != nil {
-		panic(err)
-	}
-	server.Use(sessions.Sessions("ssid", store))
-
-	server.Use(middleware.NewLoginMiddlewareBuilder().
-		IgnorePaths("/users/signup").
-		IgnorePaths("/users/login").Build())
+	useJWT(server)
+	//store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
+	//	[]byte("secret"), []byte("secret"))
+	//if err != nil {
+	//	panic(err)
+	//}
+	//server.Use(sessions.Sessions("ssid", store))
+	//
+	//server.Use(middleware.NewLoginMiddlewareBuilder().
+	//	IgnorePaths("/users/signup").
+	//	IgnorePaths("/users/login").Build())
 	return server
+}
+
+func useJWT(server *gin.Engine) {
+	login := middleware.LoginJWTMiddleWareBuilder{}
+	server.Use(login.IgnorePaths("/users/signup").IgnorePaths("/users/login").Build())
 }
 
 func initDB() *gorm.DB {
