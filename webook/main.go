@@ -79,7 +79,7 @@ func useJWT(server *gin.Engine) {
 }
 
 func initDB() *gorm.DB {
-	db, err := gorm.Open(mysql.Open("root:root@tcp(webook-record-redis:3308)/webook"))
+	db, err := gorm.Open(mysql.Open("root:root@tcp(webook-record-mysql:3308)/webook"))
 	if err != nil {
 		// 只会在初始化过程panic
 		// panic相当于整个goroutine结束
