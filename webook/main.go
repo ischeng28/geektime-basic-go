@@ -12,21 +12,15 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"net/http"
 	"strings"
 	"time"
 )
 
 func main() {
-	//db := initDB()
-	//
-	//server := initWebServer()
-	//initUserHdl(db, server)
+	db := initDB()
 
-	server := gin.Default()
-	server.GET("/hello", func(ctx *gin.Context) {
-		ctx.String(http.StatusOK, "你好，我来了")
-	})
+	server := initWebServer()
+	initUserHdl(db, server)
 
 	server.Run(":8080")
 }
@@ -60,7 +54,7 @@ func initWebServer() *gin.Engine {
 	}))
 
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: "webook-record-redis:6379",
 	})
 
 	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
@@ -85,7 +79,7 @@ func useJWT(server *gin.Engine) {
 }
 
 func initDB() *gorm.DB {
-	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:13316)/webook"))
+	db, err := gorm.Open(mysql.Open("root:root@tcp(webook-record-redis:3308)/webook"))
 	if err != nil {
 		// 只会在初始化过程panic
 		// panic相当于整个goroutine结束
