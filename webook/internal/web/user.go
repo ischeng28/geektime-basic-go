@@ -180,8 +180,26 @@ func (u *UserHandler) Edit(ctx *gin.Context) {
 
 }
 
-func (u *UserHandler) Profile(ctx *gin.Context) {
-
+func (h *UserHandler) Profile(ctx *gin.Context) {
+	uc, ok := ctx.MustGet("user").(UserClaims)
+	if !ok {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	u, err := h.svc.FindById(ctx, uc.Uid)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统异常")
+		return
+	}
+	type User struct {
+		Nickname string `json:"nickname"`
+		Email    string `json:"Email"`
+		AboutMe  string `json:"aboutMe"`
+		Birthday string `json:"birthday"`
+	}
+	ctx.JSON(http.StatusOK, User{
+		Email: u.Email,
+	})
 }
 
 var JWTKey = []byte("k6CswdUm77WKcbM68UQUuxVsHSpTCwgK")

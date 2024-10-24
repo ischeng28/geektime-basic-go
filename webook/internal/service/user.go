@@ -46,3 +46,8 @@ func (svc *UserService) Login(ctx context.Context, u domain.User) (domain.User, 
 	}
 	return user, nil
 }
+
+func (svc *UserService) FindById(ctx context.Context,
+	uid int64) (domain.User, error) {
+	return svc.repo.FindById(ctx, uid)
+}

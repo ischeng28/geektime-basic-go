@@ -23,7 +23,7 @@ func main() {
 	server := initWebServer()
 	initUserHdl(db, server)
 
-	server.Run(":8080")
+	server.Run(":18077")
 }
 
 func initUserHdl(db *gorm.DB, server *gin.Engine) {
