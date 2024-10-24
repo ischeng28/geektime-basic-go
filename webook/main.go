@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ischeng28/basic-go/webook/config"
 	"github.com/ischeng28/basic-go/webook/internal/repository"
+	"github.com/ischeng28/basic-go/webook/internal/repository/cache"
 	"github.com/ischeng28/basic-go/webook/internal/repository/dao"
 	"github.com/ischeng28/basic-go/webook/internal/service"
 	"github.com/ischeng28/basic-go/webook/internal/web"
@@ -19,22 +20,24 @@ import (
 
 func main() {
 	db := initDB()
+	redisCmd := initRedis()
 
-	server := initWebServer()
-	initUserHdl(db, server)
+	server := initWebServer(redisCmd)
+	initUserHdl(db, server, redisCmd)
 
 	server.Run(":18077")
 }
 
-func initUserHdl(db *gorm.DB, server *gin.Engine) {
+func initUserHdl(db *gorm.DB, server *gin.Engine, cmd redis.Cmdable) {
 	ud := dao.NewUserDAO(db)
-	ur := repository.NewUserRepository(ud)
+	uc := cache.NewUserCache(cmd)
+	ur := repository.NewUserRepository(ud, uc)
 	us := service.NewUserService(ur)
 	hdl := web.NewUserHandler(us)
 	hdl.RegisterRoutes(server)
 }
 
-func initWebServer() *gin.Engine {
+func initWebServer(cmdable redis.Cmdable) *gin.Engine {
 
 	server := gin.Default()
 
@@ -54,11 +57,7 @@ func initWebServer() *gin.Engine {
 		MaxAge: 12 * time.Hour,
 	}))
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: config.Config.Redis.Addr,
-	})
-
-	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
+	server.Use(ratelimit.NewBuilder(cmdable, time.Second, 100).Build())
 
 	useJWT(server)
 	//store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
@@ -77,6 +76,12 @@ func initWebServer() *gin.Engine {
 func useJWT(server *gin.Engine) {
 	login := middleware.LoginJWTMiddleWareBuilder{}
 	server.Use(login.IgnorePaths("/users/signup").IgnorePaths("/users/login").Build())
+}
+
+func initRedis() redis.Cmdable {
+	return redis.NewClient(&redis.Options{
+		Addr: config.Config.Redis.Addr,
+	})
 }
 
 func initDB() *gorm.DB {
