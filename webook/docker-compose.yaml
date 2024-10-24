@@ -8,10 +8,10 @@ services:
     volumes:
       - ./script/mysql/:/docker-entrypoint-initdb.d/
     ports:
-      - 13316:3306
+      - "13316:3306"
   redis:
-    image: 'bitnami/redis:latest'
+    image: 'bitnami/redis:7.4'
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
     ports:
-      - '6379:6379'
+      - '16379:6379'

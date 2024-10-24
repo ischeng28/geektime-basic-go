@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/ischeng28/basic-go/webook/config"
 	"github.com/ischeng28/basic-go/webook/internal/repository"
 	"github.com/ischeng28/basic-go/webook/internal/repository/dao"
 	"github.com/ischeng28/basic-go/webook/internal/service"
@@ -54,7 +55,7 @@ func initWebServer() *gin.Engine {
 	}))
 
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "webook-record-redis:6379",
+		Addr: config.Config.Redis.Addr,
 	})
 
 	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
@@ -79,7 +80,7 @@ func useJWT(server *gin.Engine) {
 }
 
 func initDB() *gorm.DB {
-	db, err := gorm.Open(mysql.Open("root:root@tcp(webook-record-mysql:3308)/webook"))
+	db, err := gorm.Open(mysql.Open(config.Config.DB.DSN))
 	if err != nil {
 		// 只会在初始化过程panic
 		// panic相当于整个goroutine结束
