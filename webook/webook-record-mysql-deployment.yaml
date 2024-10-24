@@ -31,5 +31,5 @@ spec:
       volumes:
         - name: mysql-storage
           persistentVolumeClaim:
-            #            PVC persistent volume claim
+            # PVC persistent volume claim
             claimName: webook-mysql-pvc

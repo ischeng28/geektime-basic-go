@@ -72,18 +72,13 @@ func (repo *UserRepository) FindById(ctx context.Context, uid int64) (domain.Use
 	}
 
 	du = repo.toDomain(u)
-	//go func() {
-	//	err = repo.cache.Set(ctx, du)
-	//	if err != nil {
-	//		log.Println(err)
-	//	}
-	//}()
+	go func() {
+		err = repo.cache.Set(ctx, du)
+		if err != nil {
+			// 网络崩了，也可能是 redis 崩了
+			log.Println(err)
+		}
+	}()
 
-	err = repo.cache.Set(ctx, du)
-	if err != nil {
-		// 网络崩了，也可能是 redis 崩了
-		log.Println(err)
-	}
 	return du, nil
-
 }
