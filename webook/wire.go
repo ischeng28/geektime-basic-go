@@ -31,13 +31,16 @@ func InitWebServer() *gin.Engine {
 		// Service 部分
 		//ioc.InitSMSService,
 		service.NewUserService,
+
 		//service.NewCodeService,
 
 		// handler 部分
 		web.NewUserHandler,
+		web.NewOAuth2WechatHandler,
 
 		ioc.InitGinMiddlewares,
 		ioc.InitWebServer,
+		ioc.InitWechatService,
 	)
 	return gin.Default()
 }

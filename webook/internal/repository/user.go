@@ -9,6 +9,7 @@ import (
 )
 
 var (
+	ErrDuplicateUser  = dao.ErrDuplicateEmail
 	ErrDuplicateEmail = dao.ErrDuplicateEmail
 	ErrUserNotFound   = dao.ErrUserNotFound
 )
@@ -23,6 +24,7 @@ type UserRepository interface {
 	FindById(ctx context.Context, uid int64) (domain.User, error)
 	FindByEmail(ctx context.Context, email string) (domain.User, error)
 	toDomain(u dao.User) domain.User
+	FindByWechat(ctx context.Context, openId string) (domain.User, error)
 }
 
 func NewUserRepository(dao dao.UserDAO, cache cache.UserCache) UserRepository {
@@ -50,7 +52,14 @@ func (r *CachedUserRepository) FindByEmail(ctx context.Context, email string) (d
 		Email:    u.Email,
 		Password: u.Password,
 	}, nil
+}
 
+func (repo *CachedUserRepository) FindByWechat(ctx context.Context, openId string) (domain.User, error) {
+	ue, err := repo.dao.FindByWechat(ctx, openId)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return repo.toDomain(ue), nil
 }
 
 func (repo *CachedUserRepository) toDomain(u dao.User) domain.User {
@@ -58,6 +67,10 @@ func (repo *CachedUserRepository) toDomain(u dao.User) domain.User {
 		Id:       u.Id,
 		Email:    u.Email,
 		Password: u.Password,
+		WechatInfo: domain.WechatInfo{
+			OpenId:  u.WechatOpenId.String,
+			UnionId: u.WechatUnionId.String,
+		},
 	}
 }
 

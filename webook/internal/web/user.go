@@ -5,15 +5,14 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/ischeng28/basic-go/webook/internal/domain"
 	"github.com/ischeng28/basic-go/webook/internal/service"
 	"net/http"
-	"time"
 )
 
 // UserHandler 在上面定义跟用户有关的路由
 type UserHandler struct {
+	jwtHandler
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
 	svc         service.UserService
@@ -34,7 +33,8 @@ func NewUserHandler(svc service.UserService) *UserHandler {
 	}
 }
 
-func (u *UserHandler) RegisterRoutesV1(ug *gin.RouterGroup) {
+func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
+	ug := server.Group("/users")
 	ug.GET("/profile", u.Profile)
 	ug.POST("/signup", u.SignUp)
 	ug.POST("/login", u.LoginJWT)
@@ -112,20 +112,7 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) {
 	})
 	switch {
 	case err == nil:
-		uc := UserClaims{
-			Uid:       u.Id,
-			UserAgent: ctx.GetHeader("User-Agent"),
-			RegisteredClaims: jwt.RegisteredClaims{
-				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 10)),
-			},
-		}
-		token := jwt.NewWithClaims(jwt.SigningMethodHS512, uc)
-		tokenStr, err := token.SignedString(JWTKey)
-		if err != nil {
-			ctx.String(http.StatusOK, "系统错误")
-		}
-		ctx.Header("x-jwt-token", tokenStr)
-
+		h.setJWTToken(ctx, u.Id)
 		ctx.String(http.StatusOK, "登录成功")
 	case errors.Is(err, service.ErrInvalidUserOrPassword):
 		ctx.String(http.StatusOK, "用户名或者密码不正确")
@@ -192,12 +179,4 @@ func (h *UserHandler) Profile(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, User{
 		Email: u.Email,
 	})
-}
-
-var JWTKey = []byte("k6CswdUm77WKcbM68UQUuxVsHSpTCwgK")
-
-type UserClaims struct {
-	jwt.RegisteredClaims
-	Uid       int64
-	UserAgent string
 }

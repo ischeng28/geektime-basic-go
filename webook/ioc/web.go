@@ -11,10 +11,11 @@ import (
 	"time"
 )
 
-func InitWebServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler) *gin.Engine {
+func InitWebServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler, wechatHdl *web.OAuth2WechatHandler) *gin.Engine {
 	server := gin.Default()
 	server.Use(mdls...)
-	userHdl.RegisterRoutesV1(server.Group("/users"))
+	wechatHdl.RegisterRoutes(server)
+	userHdl.RegisterRoutes(server)
 	return server
 }
 
@@ -43,6 +44,6 @@ func InitGinMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
 			println("这是我的 Middleware")
 		},
 		ratelimit.NewBuilder(redisClient, time.Second, 2).Build(),
-		middleware.NewLoginJWTMiddleWareBuilder().IgnorePaths([]string{"/users/signup", "/users/login", "/hello"}).Build(),
+		middleware.NewLoginJWTMiddleWareBuilder().IgnorePaths([]string{"/users/signup", "/users/login", "/hello", "/oauth2/wechat/authurl", "/oauth2/wechat/callback"}).Build(),
 	}
 }
