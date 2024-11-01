@@ -14,7 +14,7 @@ import (
 func InitWebServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler) *gin.Engine {
 	server := gin.Default()
 	server.Use(mdls...)
-	userHdl.RegisterRoutes(server)
+	userHdl.RegisterRoutesV1(server.Group("/users"))
 	return server
 }
 
@@ -35,14 +35,14 @@ func InitGinMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
 					//if strings.Contains(origin, "localhost") {
 					return true
 				}
-				return strings.Contains(origin, "your_company.com")
+				return strings.Contains(origin, "live.webook.com")
 			},
 			MaxAge: 12 * time.Hour,
 		}),
 		func(ctx *gin.Context) {
 			println("这是我的 Middleware")
 		},
-		ratelimit.NewBuilder(redisClient, time.Second, 1000).Build(),
-		(&middleware.LoginJWTMiddleWareBuilder{}).Build(),
+		ratelimit.NewBuilder(redisClient, time.Second, 2).Build(),
+		middleware.NewLoginJWTMiddleWareBuilder().IgnorePaths([]string{"/users/signup", "/users/login", "/hello"}).Build(),
 	}
 }

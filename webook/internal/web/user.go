@@ -16,10 +16,10 @@ import (
 type UserHandler struct {
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
-	svc         *service.UserService
+	svc         service.UserService
 }
 
-func NewUserHandler(svc *service.UserService) *UserHandler {
+func NewUserHandler(svc service.UserService) *UserHandler {
 	const (
 		emailRegexPattern = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
 		// 和上面比起来，用 ` 看起来就比较清爽
@@ -35,14 +35,6 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 }
 
 func (u *UserHandler) RegisterRoutesV1(ug *gin.RouterGroup) {
-	ug.GET("/profile", u.Profile)
-	ug.POST("/signup", u.SignUp)
-	ug.POST("/login", u.LoginJWT)
-	ug.POST("/edit", u.Edit)
-}
-
-func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
-	ug := server.Group("/users")
 	ug.GET("/profile", u.Profile)
 	ug.POST("/signup", u.SignUp)
 	ug.POST("/login", u.LoginJWT)
