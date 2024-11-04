@@ -5,20 +5,22 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/ischeng28/basic-go/webook/internal/domain"
 	"github.com/ischeng28/basic-go/webook/internal/service"
+	ijwt "github.com/ischeng28/basic-go/webook/internal/web/jwt"
 	"net/http"
 )
 
 // UserHandler 在上面定义跟用户有关的路由
 type UserHandler struct {
-	jwtHandler
+	ijwt.Handler
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
 	svc         service.UserService
 }
 
-func NewUserHandler(svc service.UserService) *UserHandler {
+func NewUserHandler(svc service.UserService, hdl ijwt.Handler) *UserHandler {
 	const (
 		emailRegexPattern = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
 		// 和上面比起来，用 ` 看起来就比较清爽
@@ -30,6 +32,7 @@ func NewUserHandler(svc service.UserService) *UserHandler {
 		emailExp:    emailExp,
 		passwordExp: passwordExp,
 		svc:         svc,
+		Handler:     hdl,
 	}
 }
 
@@ -39,6 +42,8 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/signup", u.SignUp)
 	ug.POST("/login", u.LoginJWT)
 	ug.POST("/edit", u.Edit)
+	ug.GET("/refresh_token", u.RefreshToken)
+	ug.GET("/logout", u.LogoutJWT)
 }
 
 func (u *UserHandler) SignUp(ctx *gin.Context) {
@@ -112,7 +117,11 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) {
 	})
 	switch {
 	case err == nil:
-		h.setJWTToken(ctx, u.Id)
+		err = h.SetLoginToken(ctx, u.Id)
+		if err != nil {
+			ctx.String(http.StatusOK, "系统错误")
+			return
+		}
 		ctx.String(http.StatusOK, "登录成功")
 	case errors.Is(err, service.ErrInvalidUserOrPassword):
 		ctx.String(http.StatusOK, "用户名或者密码不正确")
@@ -160,7 +169,7 @@ func (u *UserHandler) Edit(ctx *gin.Context) {
 }
 
 func (h *UserHandler) Profile(ctx *gin.Context) {
-	uc, ok := ctx.MustGet("user").(UserClaims)
+	uc, ok := ctx.MustGet("user").(ijwt.UserClaims)
 	if !ok {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
@@ -179,4 +188,46 @@ func (h *UserHandler) Profile(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, User{
 		Email: u.Email,
 	})
+}
+
+func (h *UserHandler) RefreshToken(ctx *gin.Context) {
+	// 约定，前端在 Authorization 里面带上这个 refresh_token
+	tokenStr := h.ExtractToken(ctx)
+	var rc ijwt.RefreshClaims
+	token, err := jwt.ParseWithClaims(tokenStr, &rc, func(token *jwt.Token) (interface{}, error) {
+		return ijwt.RCJWTKey, nil
+	})
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	if token == nil || !token.Valid {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	err = h.CheckSession(ctx, rc.Ssid)
+	if err != nil {
+		// token 无效或者 redis 有问题
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	err = h.SetJWTToken(ctx, rc.Uid, rc.Ssid)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "OK",
+	})
+}
+
+func (h *UserHandler) LogoutJWT(ctx *gin.Context) {
+	err := h.ClearToken(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{Msg: "退出登录成功"})
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/ischeng28/basic-go/webook/internal/repository/dao"
 	"github.com/ischeng28/basic-go/webook/internal/service"
 	"github.com/ischeng28/basic-go/webook/internal/web"
+	ijwt "github.com/ischeng28/basic-go/webook/internal/web/jwt"
 	"github.com/ischeng28/basic-go/webook/ioc"
 )
 
@@ -40,6 +41,7 @@ func InitWebServer() *gin.Engine {
 
 		ioc.InitGinMiddlewares,
 		ioc.InitWebServer,
+		ijwt.NewRedisJWTHandler,
 		ioc.InitWechatService,
 	)
 	return gin.Default()

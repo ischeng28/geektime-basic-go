@@ -13,6 +13,7 @@ import (
 	"github.com/ischeng28/basic-go/webook/internal/repository/dao"
 	"github.com/ischeng28/basic-go/webook/internal/service"
 	"github.com/ischeng28/basic-go/webook/internal/web"
+	"github.com/ischeng28/basic-go/webook/internal/web/jwt"
 	"github.com/ischeng28/basic-go/webook/ioc"
 )
 
@@ -20,15 +21,16 @@ import (
 
 func InitWebServer() *gin.Engine {
 	cmdable := ioc.InitRedis()
-	v := ioc.InitGinMiddlewares(cmdable)
+	handler := jwt.NewRedisJWTHandler(cmdable)
+	v := ioc.InitGinMiddlewares(cmdable, handler)
 	db := ioc.InitDB()
 	userDAO := dao.NewUserDAO(db)
 	userCache := cache.NewUserCache(cmdable)
 	userRepository := repository.NewUserRepository(userDAO, userCache)
 	userService := service.NewUserService(userRepository)
-	userHandler := web.NewUserHandler(userService)
+	userHandler := web.NewUserHandler(userService, handler)
 	wechatService := ioc.InitWechatService()
-	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService)
+	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, handler, userService)
 	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler)
 	return engine
 }
