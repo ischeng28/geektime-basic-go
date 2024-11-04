@@ -21,9 +21,12 @@ func InitWebServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler, wechatHdl *
 
 func InitGinMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
+		func(ctx *gin.Context) {
+			println("这是我的 Middleware")
+		},
 		cors.New(cors.Config{
-			//AllowAllOrigins: true,
-			//AllowOrigins:     []string{"http://localhost:3000"},
+			//AllowAllOrigins:  true,
+			AllowOrigins:     []string{"http://localhost:3000", "http://127.0.0.1:3000"},
 			AllowCredentials: true,
 
 			AllowHeaders: []string{"Content-Type", "Authorization"},
@@ -40,9 +43,6 @@ func InitGinMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
 			},
 			MaxAge: 12 * time.Hour,
 		}),
-		func(ctx *gin.Context) {
-			println("这是我的 Middleware")
-		},
 		ratelimit.NewBuilder(redisClient, time.Second, 2).Build(),
 		middleware.NewLoginJWTMiddleWareBuilder().IgnorePaths([]string{"/users/signup", "/users/login", "/hello", "/oauth2/wechat/authurl", "/oauth2/wechat/callback"}).Build(),
 	}

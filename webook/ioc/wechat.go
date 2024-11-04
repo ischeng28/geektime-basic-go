@@ -6,6 +6,10 @@ import (
 )
 
 func InitWechatService() wechat.Service {
+	if true {
+		return wechat.NewService("wangc", "12345")
+	}
+
 	appID, ok := os.LookupEnv("WECHAT_APP_ID")
 	if !ok {
 		panic("找不到环境变量 WECHAT_APP_ID")
