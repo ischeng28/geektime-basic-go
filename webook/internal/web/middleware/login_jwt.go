@@ -3,38 +3,36 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	jwt2 "github.com/ischeng28/basic-go/webook/internal/web/jwt"
+	ijwt "github.com/ischeng28/basic-go/webook/internal/web/jwt"
 	"net/http"
 )
 
-type LoginJWTMiddleWareBuilder struct {
-	paths   []string
-	handler jwt2.Handler
+type LoginJWTMiddlewareBuilder struct {
+	ijwt.Handler
 }
 
-func NewLoginJWTMiddleWareBuilder(hdl jwt2.Handler) *LoginJWTMiddleWareBuilder {
-	return &LoginJWTMiddleWareBuilder{
-		paths:   []string{"/users/signup", "/users/login", "/hello", "/oauth2/wechat/authurl", "/oauth2/wechat/callback"},
-		handler: hdl,
+func NewLoginJWTMiddlewareBuilder(hdl ijwt.Handler) *LoginJWTMiddlewareBuilder {
+	return &LoginJWTMiddlewareBuilder{
+		Handler: hdl,
 	}
 }
 
-func (l *LoginJWTMiddleWareBuilder) IgnorePaths(paths []string) *LoginJWTMiddleWareBuilder {
-	l.paths = append(l.paths, paths...)
-	return l
-}
-
-func (m *LoginJWTMiddleWareBuilder) Build() gin.HandlerFunc {
+func (m *LoginJWTMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		for _, path := range m.paths {
-			if path == ctx.Request.URL.Path {
-				return
-			}
+		path := ctx.Request.URL.Path
+		if path == "/users/signup" ||
+			path == "/users/login" ||
+			path == "/users/login_sms/code/send" ||
+			path == "/users/login_sms" ||
+			path == "/oauth2/wechat/authurl" ||
+			path == "/oauth2/wechat/callback" {
+			// 不需要登录校验
+			return
 		}
-		extractToken := m.handler.ExtractToken(ctx)
-		var uc jwt2.UserClaims
-		token, err := jwt.ParseWithClaims(extractToken, &uc, func(token *jwt.Token) (interface{}, error) {
-			return jwt2.JWTKey, nil
+		tokenStr := m.ExtractToken(ctx)
+		var uc ijwt.UserClaims
+		token, err := jwt.ParseWithClaims(tokenStr, &uc, func(token *jwt.Token) (interface{}, error) {
+			return ijwt.JWTKey, nil
 		})
 		if err != nil {
 			// token 不对，token 是伪造的
@@ -50,12 +48,20 @@ func (m *LoginJWTMiddleWareBuilder) Build() gin.HandlerFunc {
 		}
 
 		// 这里看
-		err = m.handler.CheckSession(ctx, uc.Ssid)
+		err = m.CheckSession(ctx, uc.Ssid)
 		if err != nil {
 			// token 无效或者 redis 有问题
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
+
+		// 可以兼容 Redis 异常的情况
+		// 做好监控，监控有没有 error
+		//if cnt > 0 {
+		//	// token 无效或者 redis 有问题
+		//	ctx.AbortWithStatus(http.StatusUnauthorized)
+		//	return
+		//}
 
 		ctx.Set("user", uc)
 	}

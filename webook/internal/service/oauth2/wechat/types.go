@@ -1,10 +1,11 @@
 package wechat
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/ischeng28/basic-go/webook/internal/domain"
-	"golang.org/x/net/context"
+	"github.com/ischeng28/basic-go/webook/pkg/logger"
 	"net/http"
 	"net/url"
 )
@@ -20,16 +21,16 @@ type service struct {
 	appID     string
 	appSecret string
 	client    *http.Client
+	l         logger.LoggerV1
 }
 
-func NewService(appID string, appSecret string) Service {
+func NewService(appID string, appSecret string, l logger.LoggerV1) Service {
 	return &service{
 		appID:     appID,
 		appSecret: appSecret,
 		client:    http.DefaultClient,
 	}
 }
-
 func (s *service) VerifyCode(ctx context.Context,
 	code string) (domain.WechatInfo, error) {
 	accessTokenUrl := fmt.Sprintf(`https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code`,

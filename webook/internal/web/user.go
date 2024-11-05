@@ -15,12 +15,12 @@ import (
 // UserHandler 在上面定义跟用户有关的路由
 type UserHandler struct {
 	ijwt.Handler
-	emailExp    *regexp.Regexp
+	emailRexExp *regexp.Regexp
 	passwordExp *regexp.Regexp
 	svc         service.UserService
 }
 
-func NewUserHandler(svc service.UserService, hdl ijwt.Handler) *UserHandler {
+func NewUserHandler(svc service.UserService, hdl ijwt.Handler, codeSvc service.CodeService) *UserHandler {
 	const (
 		emailRegexPattern = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
 		// 和上面比起来，用 ` 看起来就比较清爽
@@ -29,7 +29,7 @@ func NewUserHandler(svc service.UserService, hdl ijwt.Handler) *UserHandler {
 	emailExp := regexp.MustCompile(emailRegexPattern, regexp.None)
 	passwordExp := regexp.MustCompile(passwordRegexPattern, regexp.None)
 	return &UserHandler{
-		emailExp:    emailExp,
+		emailRexExp: emailExp,
 		passwordExp: passwordExp,
 		svc:         svc,
 		Handler:     hdl,
@@ -60,7 +60,7 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 		return
 	}
 
-	ok, err := u.emailExp.MatchString(req.Email)
+	ok, err := u.emailRexExp.MatchString(req.Email)
 	if err != nil {
 		ctx.String(http.StatusOK, "系统错误")
 		return
@@ -85,7 +85,7 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 		return
 	}
 
-	err = u.svc.SingUp(ctx, domain.User{
+	err = u.svc.Signup(ctx, domain.User{
 		Email:    req.Email,
 		Password: req.Password,
 	})
@@ -111,10 +111,7 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) {
 		return
 	}
 
-	u, err := h.svc.Login(ctx, domain.User{
-		Email:    req.Email,
-		Password: req.Password,
-	})
+	u, err := h.svc.Login(ctx, req.Email, req.Password)
 	switch {
 	case err == nil:
 		err = h.SetLoginToken(ctx, u.Id)
@@ -140,10 +137,7 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		return
 	}
 
-	u, err := h.svc.Login(ctx, domain.User{
-		Email:    req.Email,
-		Password: req.Password,
-	})
+	u, err := h.svc.Login(ctx, req.Email, req.Password)
 	switch {
 	case err == nil:
 		//设置session
