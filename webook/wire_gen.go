@@ -17,13 +17,18 @@ import (
 	"github.com/ischeng28/basic-go/webook/ioc"
 )
 
+import (
+	_ "github.com/spf13/viper/remote"
+)
+
 // Injectors from wire.go:
 
 func InitWebServer() *gin.Engine {
 	cmdable := ioc.InitRedis()
 	handler := jwt.NewRedisJWTHandler(cmdable)
 	v := ioc.InitGinMiddlewares(cmdable, handler)
-	db := ioc.InitDB()
+	loggerV1 := ioc.InitLogger()
+	db := ioc.InitDB(loggerV1)
 	userDAO := dao.NewUserDAO(db)
 	userCache := cache.NewUserCache(cmdable)
 	userRepository := repository.NewUserRepository(userDAO, userCache)
