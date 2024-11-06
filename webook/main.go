@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/gin-gonic/gin"
+	"github.com/ischeng28/basic-go/webook/internal/integration/startup"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
@@ -17,7 +18,7 @@ func main() {
 	initViper()
 	initLogger()
 
-	server := InitWebServer()
+	server := startup.InitWebServer()
 	server.GET("/hello", func(ctx *gin.Context) {
 		zap.L().Debug("hello接口内容",
 			zap.Any("req", "request"),
