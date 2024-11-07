@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/ischeng28/basic-go/webook/internal/domain"
+	"github.com/ischeng28/basic-go/webook/internal/errs"
 	"github.com/ischeng28/basic-go/webook/internal/service"
 	ijwt "github.com/ischeng28/basic-go/webook/internal/web/jwt"
 	"net/http"
@@ -94,7 +95,10 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 	case err == nil:
 		ctx.String(http.StatusOK, "注册成功")
 	case errors.Is(err, service.ErrDuplicateEmail):
-		ctx.String(http.StatusOK, "邮箱冲突，请换一个")
+		ctx.JSON(http.StatusOK, Result{
+			Code: errs.UserDuplicateEmail,
+			Msg:  "邮箱冲突",
+		})
 	default:
 		ctx.String(http.StatusOK, "系统错误")
 	}

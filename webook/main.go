@@ -4,6 +4,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/gin-gonic/gin"
 	"github.com/ischeng28/basic-go/webook/internal/integration/startup"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
@@ -19,6 +20,8 @@ func main() {
 	initLogger()
 
 	server := startup.InitWebServer()
+
+	initPrometheus()
 	server.GET("/hello", func(ctx *gin.Context) {
 		zap.L().Debug("hello接口内容",
 			zap.Any("req", "request"),
@@ -26,6 +29,14 @@ func main() {
 		ctx.String(http.StatusOK, "hello，启动成功了！")
 	})
 	server.Run(":18077")
+}
+
+func initPrometheus() {
+	go func() {
+		// 专门给 prometheus 用的端口
+		http.Handle("/metrics", promhttp.Handler())
+		http.ListenAndServe(":8099", nil)
+	}()
 }
 
 func initLogger() {

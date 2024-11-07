@@ -6,11 +6,9 @@ import (
 	"github.com/ischeng28/basic-go/webook/internal/web"
 	ijwt "github.com/ischeng28/basic-go/webook/internal/web/jwt"
 	"github.com/ischeng28/basic-go/webook/internal/web/middleware"
-	"github.com/ischeng28/basic-go/webook/pkg/ginx/middleware/ratelimit"
-	"github.com/ischeng28/basic-go/webook/pkg/limiter"
+	"github.com/ischeng28/basic-go/webook/pkg/ginx/middleware/prometheus"
 	"github.com/ischeng28/basic-go/webook/pkg/logger"
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/net/context"
 	"strings"
 	"time"
 )
@@ -28,6 +26,12 @@ func InitWebServer(mdls []gin.HandlerFunc,
 }
 
 func InitGinMiddlewares(redisClient redis.Cmdable, hdl ijwt.Handler, l logger.LoggerV1) []gin.HandlerFunc {
+	pb := &prometheus.Builder{
+		Namespace: "geektime_daming",
+		Subsystem: "webook",
+		Name:      "gin_http",
+		Help:      "统计 GIN 的HTTP接口数据",
+	}
 	return []gin.HandlerFunc{
 		func(ctx *gin.Context) {
 			println("这是我的 Middleware")
@@ -51,10 +55,12 @@ func InitGinMiddlewares(redisClient redis.Cmdable, hdl ijwt.Handler, l logger.Lo
 			},
 			MaxAge: 12 * time.Hour,
 		}),
-		ratelimit.NewBuilder(limiter.NewRedisSlidingWindowLimiter(redisClient, time.Second, 1000)).Build(),
-		middleware.NewLogMiddlewareBuilder(func(ctx context.Context, al middleware.AccessLog) {
-			l.Debug("", logger.Field{Key: "req", Val: al})
-		}).AllowReqBody().AllowRespBody().Build(),
+		pb.BuildResponseTime(),
+		pb.BuildActiveRequest(),
+		//ratelimit.NewBuilder(limiter.NewRedisSlidingWindowLimiter(redisClient, time.Second, 1000)).Build(),
+		//middleware.NewLogMiddlewareBuilder(func(ctx context.Context, al middleware.AccessLog) {
+		//	l.Debug("", logger.Field{Key: "req", Val: al})
+		//}).AllowReqBody().AllowRespBody().Build(),
 		middleware.NewLoginJWTMiddlewareBuilder(hdl).CheckLogin(),
 	}
 }
